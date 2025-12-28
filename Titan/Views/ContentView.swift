@@ -286,6 +286,12 @@ struct ContentView: View {
         fetchContent(addToHistory: false)
     }
 
+    private func addToNavigationHistory(url: String) {
+        history.append(url)
+        historyIndex = history.count - 1
+        saveCurrentTabState()
+    }
+
     private func fetchContent(addToHistory: Bool = true) {
         // Cancel any pending request before starting a new one
         currentFetchTask?.cancel()
@@ -341,12 +347,24 @@ struct ContentView: View {
                     showInputPrompt = true
                 case .redirect:
                     currentError = .tooManyRedirects
+                    if addToHistory {
+                        addToNavigationHistory(url: finalURL)
+                    }
                 case .temporaryFailure:
                     currentError = .temporaryFailure(code: response.statusCode, meta: response.meta)
+                    if addToHistory {
+                        addToNavigationHistory(url: finalURL)
+                    }
                 case .permanentFailure:
                     currentError = .permanentFailure(code: response.statusCode, meta: response.meta)
+                    if addToHistory {
+                        addToNavigationHistory(url: finalURL)
+                    }
                 case .clientCertificate:
                     currentError = .clientCertificate(code: response.statusCode, meta: response.meta)
+                    if addToHistory {
+                        addToNavigationHistory(url: finalURL)
+                    }
                 }
                 isLoading = false
             } catch is CancellationError {
@@ -364,9 +382,15 @@ struct ContentView: View {
                 case .cancelled:
                     return
                 }
+                if addToHistory {
+                    addToNavigationHistory(url: urlText)
+                }
                 isLoading = false
             } catch {
                 currentError = .networkError(error.localizedDescription)
+                if addToHistory {
+                    addToNavigationHistory(url: urlText)
+                }
                 isLoading = false
             }
         }
