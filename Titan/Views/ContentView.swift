@@ -47,17 +47,27 @@ struct ContentView: View {
     // URL input focus state
     @FocusState private var isURLFocused: Bool
 
+    // Error state
+    @State private var currentError: GeminiErrorType?
+
     private let maxRedirects = 5
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                TitanContentView(content: responseText, baseURL: urlText, onLinkTap: { url in
-                    navigateTo(url)
-                })
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 4)
-                .id("top")
+                if let error = currentError {
+                    ErrorPageView(errorType: error, onRetry: {
+                        navigateTo(urlText)
+                    })
+                    .id("top")
+                } else {
+                    TitanContentView(content: responseText, baseURL: urlText, onLinkTap: { url in
+                        navigateTo(url)
+                    })
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
+                    .id("top")
+                }
             }
             .onChange(of: responseText) {
                 withAnimation {
@@ -294,6 +304,7 @@ struct ContentView: View {
 
                 switch response.statusCategory {
                 case .success:
+                    currentError = nil
                     let mimeType = response.meta
 
                     if MediaType.isMediaContent(mimeType) {
@@ -323,18 +334,19 @@ struct ContentView: View {
                         saveCurrentTabState()
                     }
                 case .input:
+                    currentError = nil
                     pendingInputURL = finalURL
                     inputPromptText = response.meta
                     inputIsSensitive = response.statusCode == 11
                     showInputPrompt = true
                 case .redirect:
-                    responseText = "Too many redirects"
+                    currentError = .tooManyRedirects
                 case .temporaryFailure:
-                    responseText = "Temporary failure (\(response.statusCode)): \(response.meta)"
+                    currentError = .temporaryFailure(code: response.statusCode, meta: response.meta)
                 case .permanentFailure:
-                    responseText = "Error (\(response.statusCode)): \(response.meta)"
+                    currentError = .permanentFailure(code: response.statusCode, meta: response.meta)
                 case .clientCertificate:
-                    responseText = "Client certificate required: \(response.meta)"
+                    currentError = .clientCertificate(code: response.statusCode, meta: response.meta)
                 }
                 isLoading = false
             } catch is CancellationError {
@@ -343,8 +355,18 @@ struct ContentView: View {
             } catch let error as GeminiError where error == .cancelled {
                 // Request was cancelled, don't update UI
                 return
+            } catch let error as GeminiError {
+                switch error {
+                case .invalidResponse:
+                    currentError = .invalidResponse
+                case .invalidURL:
+                    currentError = .invalidURL
+                case .cancelled:
+                    return
+                }
+                isLoading = false
             } catch {
-                responseText = "Error: \(error.localizedDescription)"
+                currentError = .networkError(error.localizedDescription)
                 isLoading = false
             }
         }
