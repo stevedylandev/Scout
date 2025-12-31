@@ -50,6 +50,12 @@ struct ContentView: View {
     // Error state
     @State private var currentError: GeminiErrorType?
 
+    // Certificate management
+    @State private var certificateManager = CertificateManager()
+    @State private var showCertificateMismatchAlert = false
+    @State private var pendingCertificateChange: (hostname: String, storedFingerprint: String, newFingerprint: String, commonName: String)?
+    @State private var pendingCertificateURL: String?
+
     private let maxRedirects = 5
 
     var body: some View {
@@ -165,6 +171,37 @@ struct ContentView: View {
                 loadActiveTabState()
             }
         }
+        .alert("Certificate Changed", isPresented: $showCertificateMismatchAlert) {
+            Button("Reject", role: .cancel) {
+                pendingCertificateChange = nil
+                pendingCertificateURL = nil
+            }
+            Button("Accept New Certificate") {
+                if let change = pendingCertificateChange {
+                    certificateManager.updateCertificate(
+                        hostname: change.hostname,
+                        fingerprint: change.newFingerprint,
+                        commonName: change.commonName
+                    )
+                    // Retry navigation with the updated certificate
+                    if let url = pendingCertificateURL {
+                        navigateTo(url)
+                    }
+                }
+                pendingCertificateChange = nil
+                pendingCertificateURL = nil
+            }
+        } message: {
+            if let change = pendingCertificateChange {
+                Text("The certificate for \(change.hostname) has changed.\n\nOld fingerprint:\n\(formatFingerprint(change.storedFingerprint))\n\nNew fingerprint:\n\(formatFingerprint(change.newFingerprint))\n\nThis could indicate a security issue or the server updated its certificate.")
+            } else {
+                Text("A certificate change was detected.")
+            }
+        }
+    }
+
+    private func formatFingerprint(_ fingerprint: String) -> String {
+        fingerprint.prefix(32) + "..."
     }
 
     // MARK: - Tab State Management
@@ -370,7 +407,7 @@ struct ContentView: View {
             } catch is CancellationError {
                 // Task was cancelled, don't update UI
                 return
-            } catch let error as GeminiError where error == .cancelled {
+            } catch GeminiError.cancelled {
                 // Request was cancelled, don't update UI
                 return
             } catch let error as GeminiError {
@@ -381,6 +418,14 @@ struct ContentView: View {
                     currentError = .invalidURL
                 case .cancelled:
                     return
+                case .certificateMismatch(let hostname, let storedFingerprint, let newFingerprint, let commonName):
+                    pendingCertificateChange = (hostname, storedFingerprint, newFingerprint, commonName)
+                    pendingCertificateURL = urlText
+                    showCertificateMismatchAlert = true
+                    isLoading = false
+                    return
+                case .certificateError:
+                    currentError = .networkError("Could not verify server certificate")
                 }
                 if addToHistory {
                     addToNavigationHistory(url: urlText)
@@ -405,7 +450,7 @@ struct ContentView: View {
             throw GeminiError.invalidURL
         }
 
-        let client = GeminiClient(rejectUnauthorized: false)
+        let client = GeminiClient(certificateManager: certificateManager)
         let port = url.port ?? 1965
         let response = try await client.connect(
             hostname: host,

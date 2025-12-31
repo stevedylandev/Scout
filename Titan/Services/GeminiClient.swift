@@ -38,12 +38,17 @@ enum GeminiError: LocalizedError {
     case invalidResponse
     case invalidURL
     case cancelled
+    case certificateMismatch(hostname: String, storedFingerprint: String, newFingerprint: String, commonName: String)
+    case certificateError
 
     var errorDescription: String? {
         switch self {
         case .invalidResponse: return "Invalid response from server"
         case .invalidURL: return "Invalid URL"
         case .cancelled: return "Request cancelled"
+        case .certificateMismatch(let hostname, _, _, _):
+            return "Certificate for \(hostname) has changed"
+        case .certificateError: return "Could not verify server certificate"
         }
     }
 }
@@ -51,12 +56,12 @@ enum GeminiError: LocalizedError {
 // MARK: - Client
 
 class GeminiClient {
-    let rejectUnauthorized: Bool
-    
-    init(rejectUnauthorized: Bool = true) {
-        self.rejectUnauthorized = rejectUnauthorized
+    let certificateManager: CertificateManager
+
+    init(certificateManager: CertificateManager) {
+        self.certificateManager = certificateManager
     }
-    
+
     func connect(
         hostname: String,
         port: Int = 1965,
@@ -66,17 +71,46 @@ class GeminiClient {
         let port = NWEndpoint.Port(integerLiteral: UInt16(port))
 
         let tlsOptions = NWProtocolTLS.Options()
-        let rejectUnauthorized = self.rejectUnauthorized  // Capture the value, not self
+        let certVerificationState = CertificateVerificationState()
+        let capturedHostname = hostname
+        let capturedCertManager = self.certificateManager
 
         sec_protocol_options_set_verify_block(
             tlsOptions.securityProtocolOptions,
             { _, trust, verify_complete in
-                if rejectUnauthorized {
-                    var error: CFError?
-                    let secTrust = sec_trust_copy_ref(trust).takeRetainedValue()
-                    let result = SecTrustEvaluateWithError(secTrust, &error)
-                    verify_complete(result)
+                let secTrust = sec_trust_copy_ref(trust).takeRetainedValue()
+
+                guard let certInfo = CertificateManager.extractCertificateInfo(from: secTrust) else {
+                    certVerificationState.error = .certificateError
+                    verify_complete(false)
+                    return
+                }
+
+                let storedCert = capturedCertManager.getStoredCertificate(for: capturedHostname)
+
+                if let stored = storedCert {
+                    if stored.fingerprint == certInfo.fingerprint {
+                        // Certificate matches - allow connection
+                        capturedCertManager.updateLastSeen(for: capturedHostname)
+                        verify_complete(true)
+                    } else {
+                        // Certificate mismatch - reject and store details
+                        certVerificationState.error = .certificateMismatch(
+                            hostname: capturedHostname,
+                            storedFingerprint: stored.fingerprint,
+                            newFingerprint: certInfo.fingerprint,
+                            commonName: certInfo.commonName
+                        )
+                        verify_complete(false)
+                    }
                 } else {
+                    // First visit - trust and store (TOFU)
+                    capturedCertManager.storeCertificate(
+                        hostname: capturedHostname,
+                        fingerprint: certInfo.fingerprint,
+                        commonName: certInfo.commonName
+                    )
+                    print("🔐 Trusted new certificate for \(capturedHostname)")
                     verify_complete(true)
                 }
             },
@@ -116,7 +150,12 @@ class GeminiClient {
                         connection.cancel()
                         if !state.continuationResumed {
                             state.continuationResumed = true
-                            continuation.resume(throwing: error)
+                            // Check if this was a certificate verification error
+                            if let certError = certVerificationState.error {
+                                continuation.resume(throwing: certError)
+                            } else {
+                                continuation.resume(throwing: error)
+                            }
                         }
 
                     case .cancelled:
@@ -211,5 +250,10 @@ class GeminiClient {
         var responseData: Data {
             chunks.reduce(Data(), +)
         }
+    }
+
+    // Helper class to manage certificate verification state
+    private class CertificateVerificationState: @unchecked Sendable {
+        var error: GeminiError?
     }
 }
