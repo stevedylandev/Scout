@@ -10,13 +10,17 @@ import SwiftUI
 @main
 struct TitanApp: App {
     @StateObject private var themeSettings = ThemeSettings()
+    @State private var pendingDeepLinkURL: URL?
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(pendingDeepLinkURL: $pendingDeepLinkURL)
                 .environment(\.themeSettings, themeSettings)
                 .environmentObject(themeSettings)
                 .preferredColorScheme(themeSettings.appearanceMode.colorScheme)
+                .onOpenURL { url in
+                    pendingDeepLinkURL = url
+                }
         }
     }
 }

@@ -29,9 +29,22 @@
 		0C5424A32EF79293001BB2ED /* TitanUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TitanUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		0C10957F2F04AB0D00120458 /* Exceptions for "Titan" folder in "Titan" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 0C54248B2EF79292001BB2ED /* Titan */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0C54248E2EF79292001BB2ED /* Titan */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				0C10957F2F04AB0D00120458 /* Exceptions for "Titan" folder in "Titan" target */,
+			);
 			path = Titan;
 			sourceTree = "<group>";
 		};
@@ -400,6 +413,7 @@
 				DEVELOPMENT_TEAM = W8QNM2N67P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Titan/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Titan II";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Titan needs access to save images from Gemini pages";
@@ -439,6 +453,7 @@
 				DEVELOPMENT_TEAM = W8QNM2N67P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Titan/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Titan II";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Titan needs access to save images from Gemini pages";

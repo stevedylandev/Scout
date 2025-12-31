@@ -7,6 +7,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var themeSettings: ThemeSettings
+    @Binding var pendingDeepLinkURL: URL?
     @State private var urlText = ""
     @State private var responseText = ""
     @State private var isLoading = false
@@ -124,6 +125,12 @@ struct ContentView: View {
             } else if responseText.isEmpty && !urlText.isEmpty {
                 // Tab has URL but no content (restored from persistence)
                 navigateTo(urlText)
+            }
+        }
+        .onChange(of: pendingDeepLinkURL) { _, newURL in
+            if let url = newURL {
+                navigateTo(url.absoluteString)
+                pendingDeepLinkURL = nil
             }
         }
         .alert("Input Required", isPresented: $showInputPrompt) {
@@ -494,6 +501,6 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    ContentView(pendingDeepLinkURL: .constant(nil))
         .environmentObject(ThemeSettings())
 }
