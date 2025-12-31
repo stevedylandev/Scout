@@ -217,123 +217,31 @@ enum GeminiErrorType {
         }
     }
 
-    var asciiArt: String {
+    var icon: String {
         switch self {
         case .temporaryFailure(let code, _):
             if code == 44 {
-                // Hourglass for "slow down"
-                return """
-                    ╭━━━━━━━╮
-                    │░░░░░░░│
-                    ╰┬─────┬╯
-                     │░░░░░│
-                     │░░░░░│
-                    ╭┴─────┴╮
-                    │       │
-                    ╰━━━━━━━╯
-                """
+                return "hourglass"
             }
-            // Clock for temporary issues
-            return """
-                  ╭───────╮
-                 ╱    │    ╲
-                │     │     │
-                │     ╰──   │
-                │           │
-                 ╲         ╱
-                  ╰───────╯
-            """
+            return "clock.badge.exclamationmark"
         case .permanentFailure(let code, _):
             if code == 51 {
-                // Question mark for not found
-                return """
-                   ╭━━━━━╮
-                   │ ??? │
-                   ╰──┬──╯
-                      │
-                    ╭─┴─╮
-                    │ ? │
-                    ╰───╯
-                """
+                return "questionmark.folder"
             }
             if code == 52 {
-                // Ghost for "gone"
-                return """
-                    ╭─────╮
-                   ╱ ◠   ◠ ╲
-                  │    ▽    │
-                  │         │
-                   ╲ ╱ ╲ ╱ ╱
-                    ╵   ╵
-                """
+                return "trash"
             }
-            // X mark for errors
-            return """
-                  ╲       ╱
-                   ╲     ╱
-                    ╲   ╱
-                     ╲ ╱
-                     ╱ ╲
-                    ╱   ╲
-                   ╱     ╲
-                  ╱       ╲
-            """
+            return "xmark.circle"
         case .clientCertificate:
-            // Lock icon
-            return """
-                   ╭─────╮
-                   │     │
-                 ╭─┴─────┴─╮
-                 │  ┌───┐  │
-                 │  │ ◉ │  │
-                 │  └─┬─┘  │
-                 ╰────┴────╯
-            """
+            return "lock.shield"
         case .tooManyRedirects:
-            // Circular arrows
-            return """
-                  ╭──────╮
-                 ╱   ──▶  ╲
-                │ ▲       │
-                │         ▼
-                 ╲  ◀──   ╱
-                  ╰──────╯
-            """
+            return "arrow.triangle.2.circlepath"
         case .networkError:
-            // Disconnected plug
-            return """
-                 ╭───╮
-                 │ ● │
-                 │ ● │╶╶╶╮
-                 ╰───╯   ┊
-                         ┊
-                 ╭───╮   ┊
-                 │ ○ │╶╶╶╯
-                 │ ○ │
-                 ╰───╯
-            """
+            return "wifi.slash"
         case .invalidResponse:
-            // Broken document
-            return """
-                 ╭───────╮
-                 │ ≋≋≋≋≋ │
-                 │ ≋≋≋ ╱─┤
-                 ├───╱   │
-                 │   ╲───┤
-                 │ ≋≋ ╲  │
-                 ╰───────╯
-            """
+            return "doc.badge.ellipsis"
         case .invalidURL:
-            // Broken link
-            return """
-                 ╭───╮
-                ╱    ╲────╮
-                ╲    ╱    │
-                 ╰─╳─╯    │
-                     ╭─╳──╯
-                     │╱    ╲
-                     ╰────╱
-            """
+            return "link.badge.plus"
         }
     }
 }
@@ -366,30 +274,30 @@ struct ErrorPageView: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            // ASCII Art
-            Text(errorType.asciiArt)
-                .font(.system(size: 14, design: .monospaced))
+            // Icon
+            Image(systemName: errorType.icon)
+                .font(.system(size: 60))
                 .foregroundColor(errorColor)
-                .multilineTextAlignment(.center)
 
             // Title and status code
             VStack(spacing: 4) {
                 Text(errorType.title)
-                    .font(.system(.title2, design: .rounded))
+                    .font(.system(.title2, design: themeSettings.fontDesign.fontDesign))
                     .fontWeight(.bold)
                     .foregroundColor(themeSettings.textColor)
 
                 if let code = errorType.statusCode {
                     Text(code)
-                        .font(.system(.subheadline, design: .monospaced))
+                        .font(.system(.subheadline, design: themeSettings.fontDesign.fontDesign))
                         .foregroundColor(.secondary)
                 }
             }
 
-            // Server message if present
-            if let meta = errorType.meta {
+            // Server message if present and different from title
+            if let meta = errorType.meta,
+               meta.lowercased() != errorType.title.lowercased() {
                 Text(meta)
-                    .font(.system(.caption, design: .monospaced))
+                    .font(.system(.caption, design: themeSettings.fontDesign.fontDesign))
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
@@ -401,7 +309,7 @@ struct ErrorPageView: View {
 
             // Explanation
             Text(errorType.explanation)
-                .font(.system(.body, design: .default))
+                .font(.system(.body, design: themeSettings.fontDesign.fontDesign))
                 .foregroundColor(themeSettings.textColor.opacity(0.8))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
@@ -413,7 +321,7 @@ struct ErrorPageView: View {
                         Text("•")
                             .foregroundColor(errorColor)
                         Text(suggestion)
-                            .font(.system(.callout))
+                            .font(.system(.callout, design: themeSettings.fontDesign.fontDesign))
                             .foregroundColor(.secondary)
                     }
                 }
@@ -427,7 +335,8 @@ struct ErrorPageView: View {
                         Image(systemName: "arrow.clockwise")
                         Text("Try Again")
                     }
-                    .font(.system(.body, weight: .medium))
+                    .font(.system(.body, design: themeSettings.fontDesign.fontDesign))
+                    .fontWeight(.medium)
                     .foregroundColor(.white)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
