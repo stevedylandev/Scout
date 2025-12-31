@@ -22,6 +22,7 @@ struct BrowserToolbar: View {
     let onBack: () -> Void
     let onForward: () -> Void
     let onSubmitURL: () -> Void
+    let onCancel: () -> Void
     let onDismissKeyboard: () -> Void
     let onShowTabs: () -> Void
     let onNewTab: () -> Void
@@ -92,19 +93,47 @@ struct BrowserToolbar: View {
     }
 
     private var urlTextField: some View {
-        TextField("gemini:// or search", text: $urlText)
-            .focused(isURLFocused)
-            .autocapitalization(.none)
-            .disableAutocorrection(true)
-            .keyboardType(.webSearch)
-            .submitLabel(.go)
-            .onSubmit {
-                isURLFocused.wrappedValue = false
-                onSubmitURL()
+        HStack(spacing: 0) {
+            TextField("gemini:// or search", text: $urlText)
+                .focused(isURLFocused)
+                .autocapitalization(.none)
+                .disableAutocorrection(true)
+                .keyboardType(.webSearch)
+                .submitLabel(.go)
+                .onSubmit {
+                    isURLFocused.wrappedValue = false
+                    onSubmitURL()
+                }
+                .padding(.leading, 12)
+                .padding(.vertical, 12)
+
+            if isLoading {
+                Button(action: onCancel) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.body)
+                        .foregroundStyle(themeSettings.toolbarButtonColor.opacity(0.7))
+                }
+                .padding(.horizontal, 10)
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
+            } else if isURLFocused.wrappedValue && !urlText.isEmpty {
+                Button {
+                    urlText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.body)
+                        .foregroundStyle(themeSettings.toolbarButtonColor.opacity(0.7))
+                }
+                .padding(.horizontal, 10)
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
+            } else {
+                Spacer()
+                    .frame(width: 12)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 12)
-            .glassEffect(.regular, in: .capsule)
+        }
+        .glassEffect(.regular, in: .capsule)
+        .animation(.easeInOut(duration: 0.2), value: isLoading)
+        .animation(.easeInOut(duration: 0.2), value: isURLFocused.wrappedValue)
+        .animation(.easeInOut(duration: 0.2), value: urlText.isEmpty)
     }
 
     private var dismissButton: some View {

@@ -95,6 +95,7 @@ struct ContentView: View {
                     onBack: goBack,
                     onForward: goForward,
                     onSubmitURL: { navigateTo(urlText) },
+                    onCancel: cancelCurrentRequest,
                     onDismissKeyboard: { isURLFocused = false },
                     onShowTabs: { showTabs = true },
                     onNewTab: {
@@ -321,6 +322,12 @@ struct ContentView: View {
         historyIndex += 1
         urlText = history[historyIndex]
         fetchContent(addToHistory: false)
+    }
+
+    private func cancelCurrentRequest() {
+        currentFetchTask?.cancel()
+        currentFetchTask = nil
+        isLoading = false
     }
 
     private func addToNavigationHistory(url: String) {
