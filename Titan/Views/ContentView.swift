@@ -177,6 +177,10 @@ struct ContentView: View {
                 saveCurrentTabState()
                 tabManager.switchTo(id: tab.id)
                 loadActiveTabState()
+                // If this is a new tab with no URL, navigate to home
+                if urlText.isEmpty {
+                    navigateTo(themeSettings.homePage)
+                }
             }
         }
         .alert("Certificate Changed", isPresented: $showCertificateMismatchAlert) {

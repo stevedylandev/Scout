@@ -110,20 +110,20 @@ struct BrowserToolbar: View {
             if isLoading {
                 Button(action: onCancel) {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.body)
+                        .font(.title2)
                         .foregroundStyle(themeSettings.toolbarButtonColor.opacity(0.7))
+                        .frame(width: 44, height: 44)
                 }
-                .padding(.horizontal, 10)
                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
             } else if isURLFocused.wrappedValue && !urlText.isEmpty {
                 Button {
                     urlText = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.body)
+                        .font(.title2)
                         .foregroundStyle(themeSettings.toolbarButtonColor.opacity(0.7))
+                        .frame(width: 44, height: 44)
                 }
-                .padding(.horizontal, 10)
                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
             } else {
                 Spacer()
