@@ -124,39 +124,63 @@ struct ImagePreviewContent: View {
     let data: Data
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
 
     var body: some View {
         if let uiImage = UIImage(data: data) {
-            Image(uiImage: uiImage)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .scaleEffect(scale)
-                .gesture(
-                    MagnificationGesture()
-                        .onChanged { value in
-                            scale = lastScale * value
-                        }
-                        .onEnded { _ in
-                            lastScale = scale
-                            if scale < 1.0 {
-                                withAnimation {
-                                    scale = 1.0
-                                    lastScale = 1.0
+            GeometryReader { geometry in
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .scaleEffect(scale)
+                    .offset(offset)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .gesture(
+                        MagnificationGesture()
+                            .onChanged { value in
+                                scale = lastScale * value
+                            }
+                            .onEnded { _ in
+                                lastScale = scale
+                                if scale < 1.0 {
+                                    withAnimation {
+                                        scale = 1.0
+                                        lastScale = 1.0
+                                        offset = .zero
+                                        lastOffset = .zero
+                                    }
                                 }
                             }
-                        }
-                )
-                .onTapGesture(count: 2) {
-                    withAnimation {
-                        if scale > 1.0 {
-                            scale = 1.0
-                            lastScale = 1.0
-                        } else {
-                            scale = 2.0
-                            lastScale = 2.0
+                            .simultaneously(with:
+                                DragGesture()
+                                    .onChanged { value in
+                                        if scale > 1.0 {
+                                            offset = CGSize(
+                                                width: lastOffset.width + value.translation.width,
+                                                height: lastOffset.height + value.translation.height
+                                            )
+                                        }
+                                    }
+                                    .onEnded { _ in
+                                        lastOffset = offset
+                                    }
+                            )
+                    )
+                    .onTapGesture(count: 2) {
+                        withAnimation {
+                            if scale > 1.0 {
+                                scale = 1.0
+                                lastScale = 1.0
+                                offset = .zero
+                                lastOffset = .zero
+                            } else {
+                                scale = 2.0
+                                lastScale = 2.0
+                            }
                         }
                     }
-                }
+            }
         } else {
             VStack(spacing: 16) {
                 Image(systemName: "photo.badge.exclamationmark")
