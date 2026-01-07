@@ -181,8 +181,21 @@ enum GeminiErrorType {
             switch code {
             case 60:
                 return [
-                    "Client certificates are not yet supported",
-                    "Some Gemini sites require authentication"
+                    "Select or create a certificate to authenticate",
+                    "Certificates are stored securely in your Keychain",
+                    "You can manage certificates in Settings"
+                ]
+            case 61:
+                return [
+                    "Try using a different certificate",
+                    "The server may require a specific identity",
+                    "Contact the site administrator"
+                ]
+            case 62:
+                return [
+                    "Your certificate may have expired",
+                    "Create a new certificate in Settings",
+                    "Check certificate details in Settings"
                 ]
             default:
                 return [

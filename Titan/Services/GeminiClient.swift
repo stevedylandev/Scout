@@ -65,7 +65,8 @@ class GeminiClient {
     func connect(
         hostname: String,
         port: Int = 1965,
-        urlString: String
+        urlString: String,
+        clientIdentity: SecIdentity? = nil
     ) async throws -> GeminiResponse {
         let host = NWEndpoint.Host(hostname)
         let port = NWEndpoint.Port(integerLiteral: UInt16(port))
@@ -116,6 +117,18 @@ class GeminiClient {
             },
             DispatchQueue.main
         )
+
+        // Set client certificate identity if provided
+        if let identity = clientIdentity {
+            if let secIdentity = sec_identity_create(identity) {
+                sec_protocol_options_set_local_identity(
+                    tlsOptions.securityProtocolOptions,
+                    secIdentity
+                )
+                print("🔐 Using client certificate for authentication")
+            }
+        }
+
         let parameters = NWParameters(tls: tlsOptions)
         let connection = NWConnection(host: host, port: port, using: parameters)
         let state = ConnectionState()

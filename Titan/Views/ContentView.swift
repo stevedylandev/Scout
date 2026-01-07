@@ -51,11 +51,17 @@ struct ContentView: View {
     // Error state
     @State private var currentError: GeminiErrorType?
 
-    // Certificate management
+    // Server certificate management (TOFU)
     @State private var certificateManager = CertificateManager()
     @State private var showCertificateMismatchAlert = false
     @State private var pendingCertificateChange: (hostname: String, storedFingerprint: String, newFingerprint: String, commonName: String)?
-    @State private var pendingCertificateURL: String?
+    @State private var pendingServerCertificateURL: String?
+
+    // Client certificate management
+    @State private var clientCertificateManager = ClientCertificateManager()
+    @State private var showClientCertificatePrompt = false
+    @State private var pendingClientCertificateURL: String?
+    @State private var pendingClientCertificateMeta: String?
 
     private let maxRedirects = 5
 
@@ -163,7 +169,30 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView()
+            SettingsView(clientCertificateManager: clientCertificateManager)
+        }
+        .sheet(isPresented: $showClientCertificatePrompt) {
+            CertificateSelectionView(
+                manager: clientCertificateManager,
+                url: pendingClientCertificateURL ?? "",
+                serverMessage: pendingClientCertificateMeta ?? "",
+                onSelect: { certificateId in
+                    // Associate certificate with URL and retry
+                    if let urlString = pendingClientCertificateURL,
+                       let url = URL(string: urlString) {
+                        clientCertificateManager.associateCertificate(certificateId: certificateId, with: url)
+                        showClientCertificatePrompt = false
+                        pendingClientCertificateURL = nil
+                        pendingClientCertificateMeta = nil
+                        currentError = nil
+                        navigateTo(urlString)
+                    }
+                },
+                onCancel: {
+                    showClientCertificatePrompt = false
+                    // Keep the error displayed
+                }
+            )
         }
         .sheet(isPresented: $showHistory) {
             HistoryListView(historyManager: historyManager) { item in
@@ -186,7 +215,7 @@ struct ContentView: View {
         .alert("Certificate Changed", isPresented: $showCertificateMismatchAlert) {
             Button("Reject", role: .cancel) {
                 pendingCertificateChange = nil
-                pendingCertificateURL = nil
+                pendingServerCertificateURL = nil
             }
             Button("Accept New Certificate") {
                 if let change = pendingCertificateChange {
@@ -196,12 +225,12 @@ struct ContentView: View {
                         commonName: change.commonName
                     )
                     // Retry navigation with the updated certificate
-                    if let url = pendingCertificateURL {
+                    if let url = pendingServerCertificateURL {
                         navigateTo(url)
                     }
                 }
                 pendingCertificateChange = nil
-                pendingCertificateURL = nil
+                pendingServerCertificateURL = nil
             }
         } message: {
             if let change = pendingCertificateChange {
@@ -416,7 +445,16 @@ struct ContentView: View {
                         addToNavigationHistory(url: finalURL)
                     }
                 case .clientCertificate:
-                    currentError = .clientCertificate(code: response.statusCode, meta: response.meta)
+                    if response.statusCode == 60 {
+                        // Certificate required - show selection prompt
+                        pendingClientCertificateURL = finalURL
+                        pendingClientCertificateMeta = response.meta
+                        showClientCertificatePrompt = true
+                        currentError = .clientCertificate(code: response.statusCode, meta: response.meta)
+                    } else {
+                        // 61 (not authorized) or 62 (not valid) - show error
+                        currentError = .clientCertificate(code: response.statusCode, meta: response.meta)
+                    }
                     if addToHistory {
                         addToNavigationHistory(url: finalURL)
                     }
@@ -438,7 +476,7 @@ struct ContentView: View {
                     return
                 case .certificateMismatch(let hostname, let storedFingerprint, let newFingerprint, let commonName):
                     pendingCertificateChange = (hostname, storedFingerprint, newFingerprint, commonName)
-                    pendingCertificateURL = urlText
+                    pendingServerCertificateURL = urlText
                     showCertificateMismatchAlert = true
                     isLoading = false
                     return
@@ -470,10 +508,15 @@ struct ContentView: View {
 
         let client = GeminiClient(certificateManager: certificateManager)
         let port = url.port ?? 1965
+
+        // Look up client certificate for this URL
+        let clientIdentity = clientCertificateManager.findIdentity(for: url)
+
         let response = try await client.connect(
             hostname: host,
             port: port,
-            urlString: urlString
+            urlString: urlString,
+            clientIdentity: clientIdentity
         )
 
         // Check for cancellation after fetch

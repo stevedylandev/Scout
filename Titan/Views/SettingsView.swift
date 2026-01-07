@@ -8,6 +8,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var themeSettings: ThemeSettings
     @Environment(\.dismiss) private var dismiss
+    var clientCertificateManager: ClientCertificateManager
 
     @State private var homePageText: String = ""
     @State private var searchEngineText: String = ""
@@ -80,6 +81,23 @@ struct SettingsView: View {
                 } header: {
                     Text("Dark Mode Colors")
                 }
+
+                Section {
+                    NavigationLink {
+                        ClientCertificatesView(manager: clientCertificateManager)
+                    } label: {
+                        HStack {
+                            Label("Client Certificates", systemImage: "person.badge.key")
+                            Spacer()
+                            Text("\(clientCertificateManager.certificates.count)")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Security")
+                } footer: {
+                    Text("Manage certificates for authenticating with Gemini capsules.")
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -120,6 +138,6 @@ struct SettingsView: View {
 }
 
 #Preview {
-    SettingsView()
+    SettingsView(clientCertificateManager: ClientCertificateManager())
         .environmentObject(ThemeSettings())
 }
