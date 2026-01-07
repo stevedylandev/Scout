@@ -100,7 +100,9 @@ class ThemeSettings: ObservableObject {
         case .dark:
             return darkBackgroundColor
         case .automatic:
-            return Color(UIColor.systemBackground)
+            // Use appropriate custom color based on current system appearance
+            let isDark = UITraitCollection.current.userInterfaceStyle == .dark
+            return isDark ? darkBackgroundColor : lightBackgroundColor
         }
     }
 
@@ -112,7 +114,9 @@ class ThemeSettings: ObservableObject {
         case .dark:
             return darkTextColor
         case .automatic:
-            return Color(UIColor.label)
+            // Use appropriate custom color based on current system appearance
+            let isDark = UITraitCollection.current.userInterfaceStyle == .dark
+            return isDark ? darkTextColor : lightTextColor
         }
     }
 
