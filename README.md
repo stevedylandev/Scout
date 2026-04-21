@@ -1,4 +1,4 @@
-# Titan II
+# Scout
 
 ![cover](https://files.stevedylan.dev/titan.png)
 
@@ -27,7 +27,7 @@ A native iOS client for the [Gemini protocol](https://geminiprotocol.net/) — a
 
 ## Build & Run
 
-Open `Titan.xcodeproj` in Xcode and run with `Cmd+R`.
+Open `Scout.xcodeproj` in Xcode and run with `Cmd+R`.
 
 ## License 
 
