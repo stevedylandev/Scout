@@ -1,6 +1,6 @@
 # Scout
 
-![cover](https://files.stevedylan.dev/titan.png)
+![cover](https://files.stevedylan.dev/scout-demo.png)
 
 A native iOS client for the [Gemini protocol](https://geminiprotocol.net/) — a lightweight, privacy-focused alternative to the web.
 
