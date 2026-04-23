@@ -4,9 +4,6 @@
 
 A native iOS client for the [Gemini protocol](https://geminiprotocol.net/) — a lightweight, privacy-focused alternative to the web.
 
->[!NOTE]
->I built this project but have not had the time to deploy + maintain it. If you find it useful, please feel free to take the code and publish it as you wish!
-
 ## Features
 
 - Browse Gemini capsules with full `text/gemini` rendering (headers, links, lists, preformatted text)
